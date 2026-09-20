@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>猜人名活動</title>
+<style>
+  :root{
+    --bg:#10131a;
+    --panel:#1a1f2b;
+    --text:#f5f7fb;
+    --muted:#aab2c0;
+    --accent:#6ea8fe;
+    --good:#67d391;
+    --danger:#ff7a7a;
+    --line:#2c3444;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:"Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+  }
+  .app{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+  header{
+    padding:14px 18px;
+    background:var(--panel);
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  h1{
+    margin:0;
+    font-size:22px;
+  }
+  .controls{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  button,.file-label{
+    border:0;
+    border-radius:10px;
+    padding:10px 14px;
+    font-size:15px;
+    cursor:pointer;
+    color:white;
+    background:#2c3444;
+  }
+  button:hover,.file-label:hover{filter:brightness(1.12)}
+  .primary{background:var(--accent);color:#061326;font-weight:700}
+  .good{background:var(--good);color:#082415;font-weight:700}
+  .danger{background:var(--danger);color:#321010}
+  input[type=file]{display:none}
+  main{
+    flex:1;
+    display:grid;
+    place-items:center;
+    padding:18px;
+  }
+  .stage{
+    width:min(1100px,96vw);
+    height:min(720px,76vh);
+    background:#090b10;
+    border:1px solid var(--line);
+    border-radius:18px;
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+  }
+  .stage img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    display:none;
+  }
+  .placeholder{
+    text-align:center;
+    color:var(--muted);
+    padding:30px;
+    line-height:1.8;
+    font-size:18px;
+  }
+  .counter{
+    position:absolute;
+    top:14px;
+    left:14px;
+    background:rgba(0,0,0,.68);
+    padding:8px 12px;
+    border-radius:10px;
+    font-weight:700;
+  }
+  .answer{
+    position:absolute;
+    left:50%;
+    bottom:20px;
+    transform:translateX(-50%);
+    background:rgba(0,0,0,.82);
+    border:2px solid rgba(255,255,255,.16);
+    padding:12px 24px;
+    border-radius:14px;
+    font-size:clamp(28px,5vw,56px);
+    font-weight:900;
+    letter-spacing:2px;
+    display:none;
+    max-width:90%;
+    text-align:center;
+    word-break:break-word;
+  }
+  footer{
+    padding:12px 18px 18px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    align-items:center;
+  }
+  .nav{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  .hint{
+    color:var(--muted);
+    font-size:14px;
+    text-align:center;
+  }
+  .name-list{
+    width:min(1100px,96vw);
+    max-height:190px;
+    overflow:auto;
+    border:1px solid var(--line);
+    border-radius:12px;
+    background:var(--panel);
+    padding:10px;
+    display:none;
+  }
+  .row{
+    display:grid;
+    grid-template-columns:52px 1fr 1fr;
+    gap:8px;
+    align-items:center;
+    padding:7px 4px;
+    border-bottom:1px solid var(--line);
+  }
+  .row:last-child{border-bottom:none}
+  .row input{
+    width:100%;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:#0f131b;
+    color:white;
+  }
+  @media(max-width:650px){
+    .stage{height:62vh}
+    .row{grid-template-columns:42px 1fr}
+    .row .filename{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>🎯 猜人名活動</h1>
+    <div class="controls">
+      <label class="file-label primary">
+        選擇圖片
+        <input id="fileInput" type="file" accept="image/*" multiple>
+      </label>
+      <button id="editBtn">編輯答案</button>
+      <button id="shuffleBtn">🔀 重新洗牌</button>
+      <button id="fullscreenBtn">⛶ 全螢幕</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="stage" id="stage">
+      <div class="placeholder" id="placeholder">
+        請先按「選擇圖片」<br>
+        建議直接把照片檔名改成人名：<br>
+        <b>王小明.jpg → 答案自動是「王小明」</b>
+      </div>
+      <img id="photo" alt="題目圖片">
+      <div class="counter" id="counter">0 / 0</div>
+      <div class="answer" id="answer"></div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="nav">
+      <button id="prevBtn">← 上一題</button>
+      <button id="showBtn" class="good">顯示答案</button>
+      <button id="hideBtn">隱藏答案</button>
+      <button id="nextBtn" class="primary">下一題 →</button>
+    </div>
+    <div class="hint">
+      快捷鍵：← 上一題　→ 下一題　Space 顯示/隱藏答案　F 全螢幕　R 重新洗牌
+    </div>
+    <div class="name-list" id="nameList"></div>
+  </footer>
+</div>
+
+<script>
+let items = [];
+let index = 0;
+let answerVisible = false;
+
+const fileInput = document.getElementById('fileInput');
+const photo = document.getElementById('photo');
+const answer = document.getElementById('answer');
+const counter = document.getElementById('counter');
+const placeholder = document.getElementById('placeholder');
+const nameList = document.getElementById('nameList');
+
+function baseName(filename){
+  return filename.replace(/\.[^/.]+$/, '');
+}
+
+function shuffle(array){
+  for(let i=array.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [array[i],array[j]]=[array[j],array[i]];
+  }
+}
+
+function render(){
+  if(items.length===0){
+    photo.style.display='none';
+    placeholder.style.display='block';
+    counter.textContent='0 / 0';
+    answer.style.display='none';
+    return;
+  }
+
+  placeholder.style.display='none';
+  photo.style.display='block';
+  photo.src=items[index].url;
+  counter.textContent=`${index+1} / ${items.length}`;
+  answer.textContent=items[index].name;
+  answer.style.display=answerVisible ? 'block':'none';
+}
+
+function renderEditor(){
+  nameList.innerHTML='';
+  items.forEach((item,i)=>{
+    const row=document.createElement('div');
+    row.className='row';
+
+    const no=document.createElement('div');
+    no.textContent=i+1;
+
+    const file=document.createElement('div');
+    file.className='filename';
+    file.textContent=item.fileName;
+    file.title=item.fileName;
+
+    const input=document.createElement('input');
+    input.value=item.name;
+    input.placeholder='答案';
+    input.addEventListener('input',()=>{
+      item.name=input.value;
+      if(i===index){
+        answer.textContent=item.name;
+      }
+    });
+
+    row.appendChild(no);
+    row.appendChild(file);
+    row.appendChild(input);
+    nameList.appendChild(row);
+  });
+}
+
+fileInput.addEventListener('change', e=>{
+  items.forEach(x=>URL.revokeObjectURL(x.url));
+  items=[...e.target.files].map(file=>({
+    fileName:file.name,
+    name:baseName(file.name),
+    url:URL.createObjectURL(file)
+  }));
+
+  shuffle(items);
+  index=0;
+  answerVisible=false;
+  renderEditor();
+  render();
+});
+
+document.getElementById('nextBtn').addEventListener('click',()=>{
+  if(!items.length)return;
+  index=(index+1)%items.length;
+  answerVisible=false;
+  render();
+});
+
+document.getElementById('prevBtn').addEventListener('click',()=>{
+  if(!items.length)return;
+  index=(index-1+items.length)%items.length;
+  answerVisible=false;
+  render();
+});
+
+document.getElementById('showBtn').addEventListener('click',()=>{
+  answerVisible=true;
+  render();
+});
+
+document.getElementById('hideBtn').addEventListener('click',()=>{
+  answerVisible=false;
+  render();
+});
+
+document.getElementById('shuffleBtn').addEventListener('click',()=>{
+  if(!items.length)return;
+  shuffle(items);
+  index=0;
+  answerVisible=false;
+  renderEditor();
+  render();
+});
+
+document.getElementById('editBtn').addEventListener('click',()=>{
+  nameList.style.display = nameList.style.display==='block' ? 'none':'block';
+});
+
+async function toggleFullscreen(){
+  if(!document.fullscreenElement){
+    await document.documentElement.requestFullscreen?.();
+  }else{
+    await document.exitFullscreen?.();
+  }
+}
+document.getElementById('fullscreenBtn').addEventListener('click',toggleFullscreen);
+
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT') return;
+
+  if(e.key==='ArrowRight'){
+    document.getElementById('nextBtn').click();
+  }else if(e.key==='ArrowLeft'){
+    document.getElementById('prevBtn').click();
+  }else if(e.code==='Space'){
+    e.preventDefault();
+    answerVisible=!answerVisible;
+    render();
+  }else if(e.key.toLowerCase()==='f'){
+    toggleFullscreen();
+  }else if(e.key.toLowerCase()==='r'){
+    document.getElementById('shuffleBtn').click();
+  }
+});
+</script>
+</body>
+</html>
